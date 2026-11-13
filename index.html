@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>feedback.com, 최고의 첨삭</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts Inter & Noto Sans KR -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 9999px;
+    }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .animate-pulse-subtle {
+      animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- 상단 알림 토스트 (복사 및 안내용) -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform -translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-emerald-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="toast-msg">클립보드에 복사되었습니다!</span>
+  </div>
+
+  <!-- 헤더 바 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+          <i class="fa-solid fa-feather-pointed text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">AI 영어 에세이 전문 첨삭 튜터</h1>
+          <p class="text-xs text-slate-500">초등·중등 맞춤형 원포인트 코칭 & 고득점 토플형 변환</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="scrollToInput()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition">
+          <i class="fa-solid fa-plus"></i>
+          새로운 essay 첨삭하기
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 메인 레이아웃 -->
+  <main class="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- 에세이 입력 & 분석 컨트롤 섹션 -->
+    <section id="input-section" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">1</span>
+          <h2 class="text-sm sm:text-base font-bold text-slate-900">학생 에세이 텍스트 입력 또는 사진 업로드 / 카메라 촬영</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="loadSamplePrompt()" class="text-xs text-indigo-600 hover:text-indigo-800 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100 font-medium transition">
+            <i class="fa-solid fa-rotate-left mr-1"></i>방금 본 청소년 범죄 예시 복원
+          </button>
+          <button onclick="clearInput()" class="text-xs text-slate-400 hover:text-slate-600 px-2 py-1">
+            비우기
+          </button>
+        </div>
+      </div>
+
+      <!-- 이미지 업로드 / 카메라 촬영 패널 -->
+      <div class="p-3.5 bg-slate-50 border border-dashed border-indigo-200 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center text-base">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-slate-800">손글씨 노트나 컴퓨터 화면을 직접 촬영해보세요</p>
+            <p class="text-[11px] text-slate-500">모바일에서는 카메라가 바로 실행되고, PC에서는 사진 파일을 선택할 수 있습니다.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <!-- 숨겨진 파일 인풋 (모바일 카메라 지원) -->
+          <input type="file" id="image-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageSelected(event)">
+          <button onclick="triggerCameraInput()" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-50 transition shadow-xs">
+            <i class="fa-solid fa-camera"></i>
+            사진 촬영 / 사진 선택
+          </button>
+        </div>
+      </div>
+
+      <!-- 선택된 이미지 미리보기 (업로드 시 활성화) -->
+      <div id="image-preview-wrapper" class="hidden p-3 bg-indigo-50/50 rounded-xl border border-indigo-100 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 overflow-hidden">
+          <img id="image-preview-img" src="" alt="선택한 이미지 미리보기" class="w-12 h-12 object-cover rounded-lg border border-indigo-200">
+          <div class="overflow-hidden">
+            <p id="image-preview-name" class="text-xs font-bold text-slate-800 truncate">essay_photo.jpg</p>
+            <p class="text-[11px] text-indigo-600 flex items-center gap-1">
+              <i class="fa-solid fa-check"></i> 이미지가 준비되었습니다. AI가 글자를 자동 인식합니다.
+            </p>
+          </div>
+        </div>
+        <button onclick="removeSelectedImage()" class="text-xs text-rose-500 hover:text-rose-700 px-2 py-1 font-medium">
+          <i class="fa-solid fa-trash-can mr-1"></i>삭제
+        </button>
+      </div>
+
+      <div>
+        <textarea id="essay-input" rows="4" class="w-full text-sm p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition leading-relaxed placeholder:text-slate-400" placeholder="학생이 작성한 영어 에세이 원문을 이곳에 붙여넣으세요... (또는 위쪽 '사진 촬영' 버튼으로 노트나 모니터 화면을 찍어 올리시면 글자를 자동 인식합니다)"></textarea>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+        <p class="text-xs text-slate-500 flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-halved text-indigo-500"></i>
+          feed back.com ai가 문법 오류, 논리 흐름, 반복어, 속담 인용을 진단하고 A/B 2가지 버전으로 즉시 재구성합니다.
+        </p>
+        <button id="submit-btn" onclick="analyzeEssay()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold text-sm px-6 py-2.5 rounded-xl shadow-md shadow-indigo-100 transition disabled:opacity-50">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>feed back.com 첨삭 시작하기</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 상단 탭 컨트롤러 & 모드 선택 -->
+    <div class="bg-white rounded-2xl p-3 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="inline-flex p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
+        <button id="tab-version-a" onclick="switchVersion('A')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm bg-white text-indigo-700">
+          <i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>버전 A: 자연스러운 교정본 (추천)
+        </button>
+        <button id="tab-version-b" onclick="switchVersion('B')" class="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:text-slate-900">
+          <i class="fa-solid fa-graduation-cap mr-1.5"></i>버전 B: 고득점 토플형
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <button onclick="copyCurrentVersion()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition shadow shadow-indigo-200">
+          <i class="fa-regular fa-copy"></i>
+          <span id="copy-btn-text">선택된 글 전체 복사하기</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 좌우 비교 그리드 (원문 vs 수정본) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      
+      <!-- [왼쪽] 원문 카드 -->
+      <section class="bg-white rounded-2xl border border-rose-200 shadow-sm overflow-hidden flex flex-col">
+        <div class="p-4 bg-rose-50/70 border-b border-rose-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-rose-500 text-white flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </span>
+            <div>
+              <h2 class="text-sm font-bold text-slate-800">학생이 직접 쓴 원문 분석</h2>
+              <p id="original-status-desc" class="text-xs text-rose-700">오류 문맥 및 반복 부분 감지</p>
+            </div>
+          </div>
+          <span class="text-xs bg-white text-rose-600 px-2.5 py-1 rounded-md border border-rose-200 font-medium">Original</span>
+        </div>
+
+        <div id="original-content-box" class="p-5 text-sm text-slate-700 leading-relaxed space-y-4 bg-slate-50/40 custom-scroll max-h-[560px] overflow-y-auto">
+          <!-- 동적으로 렌더링 -->
+        </div>
+      </section>
+
+      <!-- [오른쪽] 수정 완성본 카드 (A/B 토글형) -->
+      <section class="bg-white rounded-2xl border border-indigo-200 shadow-sm overflow-hidden flex flex-col">
+        <div class="p-4 bg-indigo-50/70 border-b border-indigo-100 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-check"></i>
+            </span>
+            <div>
+              <h2 id="version-title" class="text-sm font-bold text-slate-900">버전 A: 학생 스타일 맞춤 교정본</h2>
+              <p id="version-subtitle" class="text-xs text-indigo-700">자연스러운 초등 5학년 톤 + 문법 완벽 수정</p>
+            </div>
+          </div>
+          <button onclick="readAloudEssay()" class="text-xs bg-white text-indigo-600 hover:bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200 font-semibold flex items-center gap-1 transition">
+            <i class="fa-solid fa-volume-high"></i> 발음 듣기
+          </button>
+        </div>
+
+        <div class="p-5 text-sm text-slate-700 leading-relaxed custom-scroll max-h-[560px] overflow-y-auto space-y-4">
+          <!-- 에세이 제목 -->
+          <div class="border-b border-slate-100 pb-2">
+            <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Title</span>
+            <h3 id="essay-title" class="text-base font-bold text-indigo-950 mt-0.5"></h3>
+          </div>
+
+          <!-- 본문 단락들 -->
+          <div class="space-y-4 text-slate-800" id="essay-paragraphs-container">
+            <div class="p-3.5 rounded-xl bg-indigo-50/30 border border-indigo-100/60">
+              <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wide">Paragraph 1 : Introduction</span>
+              <p id="essay-p1" class="mt-1 leading-relaxed"></p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-indigo-50/30 border border-indigo-100/60">
+              <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wide">Paragraph 2 : Body & Reasons</span>
+              <p id="essay-p2" class="mt-1 leading-relaxed"></p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-indigo-50/30 border border-indigo-100/60">
+              <span class="text-[11px] font-bold text-indigo-600 uppercase tracking-wide">Paragraph 3 : Conclusion</span>
+              <p id="essay-p3" class="mt-1 leading-relaxed"></p>
+            </div>
+          </div>
+
+          <!-- 복사 바로가기 카드 -->
+          <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold text-slate-800">숙제 제출용 텍스트가 필요하신가요?</p>
+              <p class="text-xs text-slate-500">줄바꿈이 정리된 텍스트 전체를 원클릭 복사합니다.</p>
+            </div>
+            <button onclick="copyCurrentVersion()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold transition">
+              복사하기
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- 하단 핵심 첨삭 노트 및 속담/어휘 카드 섹션 -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- 1. 핵심 문법/논리 첨삭 코칭 (2열 차지) -->
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-indigo-600"></i>
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base">선생님의 원포인트 첨삭 코칭</h3>
+          </div>
+          <span class="text-xs text-slate-400 font-medium" id="coaching-count-badge">핵심 4가지 피드백</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs" id="coaching-cards-container">
+          <!-- 동적 코칭 카드 삽입 -->
+        </div>
+
+        <!-- 보너스 치트키 문장 -->
+        <div class="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <span class="font-bold text-emerald-900 flex items-center gap-1.5">
+              <i class="fa-solid fa-lightbulb text-emerald-600"></i> 글자 수 추가용 치트키 문장 (선택사항)
+            </span>
+            <p class="text-emerald-800 mt-0.5" id="cheat-sentence-text">"Victims suffer regardless of the offender's age." (피해자의 고통은 가해자의 나이와 무관합니다.)</p>
+          </div>
+          <button onclick="copyCheatSentence()" class="px-2.5 py-1.5 bg-white border border-emerald-300 text-emerald-800 rounded-lg font-medium hover:bg-emerald-100 whitespace-nowrap shadow-xs">
+            이 문장만 복사
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. 핵심 단어장 & 표현 사전 -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-book-bookmark text-indigo-600"></i>
+            <h3 class="font-bold text-slate-900 text-sm sm:text-base">필수 어휘 & 표현 카드</h3>
+          </div>
+          <span class="text-xs text-indigo-600 font-semibold">발음 & 뜻</span>
+        </div>
+
+        <div class="space-y-2.5 text-xs" id="vocab-cards-container">
+          <!-- 동적 단어 카드 삽입 -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- 푸터 -->
+  <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400 mt-6">
+    영어 에세이 자동 첨삭 도우미 &bull; 초등·중등 라이팅 및 어학원 iBT 과제 지원
+  </footer>
+
+  <!-- 로딩 모달 -->
+  <div id="loading-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl border border-slate-100 text-center space-y-4">
+      <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl animate-spin">
+        <i class="fa-solid fa-circle-notch"></i>
+      </div>
+      <div>
+        <h3 id="loading-status-title" class="font-bold text-slate-900 text-base">에세이를 정밀 분석 중입니다...</h3>
+        <p id="loading-status-desc" class="text-xs text-slate-500 mt-1">문법 오류 감지, 논리적 흐름 재배치, 2개 버전 교정본 생성 중</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 에러 안내 모달 (alert 금지 규칙 준수) -->
+  <div id="error-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl border border-rose-100 text-center space-y-4">
+      <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto text-xl">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <div class="space-y-1">
+        <h3 class="font-bold text-slate-900 text-base" id="error-title">분석을 완료하지 못했습니다</h3>
+        <p class="text-xs text-slate-600 leading-relaxed" id="error-desc">일시적인 네트워크 지연이나 응답 오류가 발생했습니다. 다시 시도해 주세요.</p>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeErrorModal()" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition">
+          닫기
+        </button>
+        <button onclick="retryLastAnalysis()" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition">
+          다시 분석하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 자바스크립트 로직 -->
+  <script>
+    // script를(을) 적어주세요.
+
+    // 현재 상태 저장 객체
+    let currentData = {
+      originalSections: [
+        {
+          label: "서론 (Intro)",
+          html: `Nowadays, many juvenile crimes erupt and <span class="bg-rose-100 text-rose-800 px-1 py-0.5 rounded border border-rose-300 font-medium" title="주어 불일치: 범죄가 신경 안 쓰는 게 아니라 어린 범죄자가 신경 안 쓰는 것">does not care</span> because they do not get punished. I think that we should punish juvenile crimes like adults.`
+        },
+        {
+          label: "본론 1 & 2 (Body)",
+          html: `<p class="mb-2">Any crimes can harm all of us. crimes such as stealing <span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300">makes a lot of pain and everyone hates it</span>.</p>
+                 <p class="mb-2">If <span class="bg-rose-100 text-rose-800 px-1 py-0.5 rounded border border-rose-300 font-medium">we go unpunisunpunished</span>, the <span class="bg-rose-100 text-rose-800 px-1 py-0.5 rounded border border-rose-300 font-medium">the juveniles</span> do not regret what they did. They do not get any punishment.</p>
+                 <p class="mb-2"><span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300 font-medium">So, when later they could be a real criminal so</span>, we need to catch the juveniles now.</p>
+                 <p class="italic text-indigo-900 bg-indigo-50/60 p-2 rounded-lg border border-indigo-100"><i class="fa-solid fa-quote-left text-xs mr-1 text-indigo-400"></i> Also, there is a famous expression that says He that will steal an egg will steal an ox.</p>`
+        },
+        {
+          isDuplicate: true,
+          label: "중복 복사 감지",
+          text: `"For the reasons that first, any crimes can harm all of us... So, when later they could be a real criminal so..."`
+        },
+        {
+          label: "결론 (Conclusion)",
+          html: `So, I think that we should punish juveniles who do crimes quickly as we can. <span class="bg-rose-100 text-rose-800 px-1 py-0.5 rounded border border-rose-300 font-medium" title="부자연스러운 어색한 직역">Do not just look.</span>`
+        }
+      ],
+      A: {
+        title: "Why Juvenile Crimes Should Be Punished Strictly",
+        desc: "자연스러운 초등 5학년 톤 + 문법 완벽 수정",
+        badge: "버전 A: 자연스러운 교정본 (추천)",
+        p1: "Nowadays, juvenile crime is becoming a serious problem. Many young offenders do not care about breaking the law because they are rarely punished. I strongly believe that juveniles should face strict punishments just like adults.",
+        p2: "First, any crime harms innocent people. Offenses such as stealing cause great pain to victims. Second, if young offenders go unpunished, they will never regret what they did. Without proper consequences, they could become dangerous criminals later. As the famous proverb says, \"He that will steal an egg will steal an ox.\" We need to stop them now before small mistakes turn into bigger crimes.",
+        p3: "In conclusion, society should not just stand by and watch. We must punish young offenders strictly so that they can learn responsibility and avoid becoming real criminals."
+      },
+      B: {
+        title: "Holding Juvenile Offenders Accountable for Their Actions",
+        desc: "청담 iBT / 토플 라이팅 고득점용 아카데믹 어휘 탑재",
+        badge: "버전 B: 고득점 토플형 어휘 강화",
+        p1: "In recent years, juvenile delinquency has become a serious issue. Many young offenders act without fear because their actions often go unpunished. Therefore, I believe that juvenile crimes should be punished as strictly as adult crimes.",
+        p2: "To begin with, any crime inflicts severe damage on society. Offenses like theft cause lasting pain to innocent victims. Furthermore, when adolescents escape punishment, they fail to reflect on their wrongdoing. As the old saying goes, \"He that will steal an egg will steal an ox.\" If minor crimes are ignored now, young offenders are much more likely to commit serious crimes in adulthood.",
+        p3: "For these reasons, we must stop turning a blind eye to juvenile offenses. Enforcing strict punishments will teach young offenders responsibility and prevent future crimes before it is too late."
+      },
+      coachingNotes: [
+        {
+          title: "1. 주어 일치 (Crime vs Offender)",
+          tag: "문법 오류",
+          tagColor: "bg-rose-200 text-rose-900 border-rose-300",
+          cardBorder: "border-rose-100 bg-rose-50/30",
+          desc: "crimes erupt and does not care ➔ '범죄'가 신경 안 쓰는 것이 아니라 어린 가해자들(young offenders)이 신경 쓰지 않는 것입니다."
+        },
+        {
+          title: "2. 주어 왜곡 (We ➔ They)",
+          tag: "논리 왜곡",
+          tagColor: "bg-amber-200 text-amber-900 border-amber-300",
+          cardBorder: "border-amber-100 bg-amber-50/30",
+          desc: "If we go unpunished ➔ 처벌받지 않고 넘어가는 주체는 '우리(We)'가 아니라 '가해 청소년들(they/young offenders)'입니다."
+        },
+        {
+          title: "3. 속담 인용의 훌륭함",
+          tag: "칭찬 포인트",
+          tagColor: "bg-indigo-200 text-indigo-900 border-indigo-300",
+          cardBorder: "border-indigo-100 bg-indigo-50/30",
+          desc: "\"He that will steal an egg will steal an ox\"(바늘도둑이 소도둑 된다)는 논거에 딱 맞게 매우 훌륭하게 인용했습니다!"
+        },
+        {
+          title: "4. 끝마무리 문장 격식화",
+          tag: "표현 업그레이드",
+          tagColor: "bg-slate-200 text-slate-800 border-slate-300",
+          cardBorder: "border-slate-200 bg-slate-50",
+          desc: "Do not just look ➔ \"Society should not just stand by and watch\"(사회는 방관해서는 안 된다)로 자연스럽게 설득력을 높였습니다."
+        }
+      ],
+      cheatSentence: "Victims suffer regardless of the offender's age. (피해자의 고통은 가해자의 나이와 무관합니다.)",
+      vocabulary: [
+        { word: "go unpunished", meaning: "처벌받지 않고 그냥 넘어가다" },
+        { word: "juvenile delinquent / offender", meaning: "청소년 범죄자, 촉법소년" },
+        { word: "reflect on one's actions", meaning: "자신의 잘못을 깊이 반성하다" },
+        { word: "stand by and watch", meaning: "방관하다, 그저 바라만 보다" }
+      ]
+    };
+
+    let currentVersion = 'A';
+    let uploadedImageBase64 = null;
+    let uploadedImageMimeType = "image/jpeg";
+
+    // 화면 렌더링 함수
+    function renderApp() {
+      // 1. 원문 박스 렌더링
+      const origBox = document.getElementById('original-content-box');
+      origBox.innerHTML = '';
+
+      currentData.originalSections.forEach(sec => {
+        if (sec.isDuplicate) {
+          const dupDiv = document.createElement('div');
+          dupDiv.className = "p-3 bg-rose-50 border border-dashed border-rose-300 rounded-xl text-xs text-rose-700 flex items-start gap-2";
+          dupDiv.innerHTML = `
+            <i class="fa-solid fa-ban text-rose-500 mt-0.5"></i>
+            <div>
+              <p class="font-bold">${sec.label} (삭제 권장):</p>
+              <p class="mt-0.5 text-slate-500 line-through">${sec.text}</p>
+            </div>
+          `;
+          origBox.appendChild(dupDiv);
+        } else {
+          const cardDiv = document.createElement('div');
+          cardDiv.className = "bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs";
+          cardDiv.innerHTML = `
+            <p class="text-xs font-semibold text-slate-400 mb-1">${sec.label}</p>
+            <div class="leading-relaxed text-slate-700">${sec.html}</div>
+          `;
+          origBox.appendChild(cardDiv);
+        }
+      });
+
+      // 2. 수정본 렌더링
+      const versionData = currentData[currentVersion];
+      document.getElementById('essay-title').innerText = versionData.title;
+      document.getElementById('essay-p1').innerText = versionData.p1;
+      document.getElementById('essay-p2').innerText = versionData.p2;
+      document.getElementById('essay-p3').innerText = versionData.p3;
+      document.getElementById('version-title').innerText = versionData.badge;
+      document.getElementById('version-subtitle').innerText = versionData.desc;
+
+      // 탭 활성화 상태
+      const tabA = document.getElementById('tab-version-a');
+      const tabB = document.getElementById('tab-version-b');
+      if (currentVersion === 'A') {
+        tabA.className = "flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm bg-white text-indigo-700";
+        tabB.className = "flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
+      } else {
+        tabB.className = "flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm bg-white text-indigo-700";
+        tabA.className = "flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium transition-all text-slate-600 hover:text-slate-900";
+      }
+
+      // 3. 첨삭 코칭 카드 렌더링
+      const coachingContainer = document.getElementById('coaching-cards-container');
+      coachingContainer.innerHTML = '';
+      currentData.coachingNotes.forEach(note => {
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-xl border ${note.cardBorder} space-y-1`;
+        div.innerHTML = `
+          <div class="flex items-center justify-between font-bold text-slate-800">
+            <span>${note.title}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded ${note.tagColor}">${note.tag}</span>
+          </div>
+          <p class="text-slate-600">${note.desc}</p>
+        `;
+        coachingContainer.appendChild(div);
+      });
+      document.getElementById('coaching-count-badge').innerText = `핵심 ${currentData.coachingNotes.length}가지 피드백`;
+
+      // 4. 치트키 문장
+      document.getElementById('cheat-sentence-text').innerText = currentData.cheatSentence;
+
+      // 5. 어휘 카드 렌더링
+      const vocabContainer = document.getElementById('vocab-cards-container');
+      vocabContainer.innerHTML = '';
+      currentData.vocabulary.forEach(item => {
+        const div = document.createElement('div');
+        div.className = "p-2.5 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-slate-50 transition flex items-center justify-between";
+        div.innerHTML = `
+          <div>
+            <p class="font-bold text-slate-800 text-sm">${item.word}</p>
+            <p class="text-slate-500">${item.meaning}</p>
+          </div>
+          <button onclick="speakWord('${escapeJsString(item.word)}')" class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition flex items-center justify-center">
+            <i class="fa-solid fa-volume-low"></i>
+          </button>
+        `;
+        vocabContainer.appendChild(div);
+      });
+    }
+
+    function escapeJsString(str) {
+      if (!str) return '';
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // 버전 전환
+    function switchVersion(ver) {
+      currentVersion = ver;
+      renderApp();
+    }
+
+    // 샘플 텍스트 로드
+    function loadSamplePrompt() {
+      document.getElementById('essay-input').value = initialSampleInput;
+      showToast("예시 에세이가 입력창에 입력되었습니다.");
+    }
+
+    function clearInput() {
+      document.getElementById('essay-input').value = "";
+      removeSelectedImage();
+    }
+
+    function triggerCameraInput() {
+      document.getElementById('image-file-input').click();
+    }
+
+    // 사진 촬영 및 이미지 선택 핸들러
+    function handleImageSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        showToast("이미지 파일만 선택할 수 있습니다.");
+        return;
+      }
+
+      uploadedImageMimeType = file.type || "image/jpeg";
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const fullBase64 = e.target.result;
+        // Data URL에서 Base64 순수 데이터만 추출
+        uploadedImageBase64 = fullBase64.split(',')[1];
+
+        // 미리보기 표시
+        document.getElementById('image-preview-img').src = fullBase64;
+        document.getElementById('image-preview-name').innerText = file.name || "촬영된 사진";
+        document.getElementById('image-preview-wrapper').classList.remove('hidden');
+
+        showToast("사진이 준비되었습니다! [AI 첨삭 시작하기]를 누르면 사진 속 글을 분석합니다.");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeSelectedImage() {
+      uploadedImageBase64 = null;
+      document.getElementById('image-file-input').value = "";
+      document.getElementById('image-preview-img').src = "";
+      document.getElementById('image-preview-wrapper').classList.add('hidden');
+    }
+
+    function scrollToInput() {
+      document.getElementById('input-section').scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('essay-input').focus();
+    }
+
+    // 클립보드 복사 함수 (iframe 환경 안전)
+    function copyToClipboard(text, customMessage = "클립보드에 복사되었습니다!") {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        showToast(customMessage);
+      } catch (err) {
+        showToast("복사에 실패했습니다.");
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function copyCurrentVersion() {
+      const data = currentData[currentVersion];
+      const fullText = `${data.title}\n\n${data.p1}\n\n${data.p2}\n\n${data.p3}`;
+      copyToClipboard(fullText, `[버전 ${currentVersion}] 에세이 전체가 복사되었습니다!`);
+    }
+
+    function copyCheatSentence() {
+      copyToClipboard(currentData.cheatSentence, "치트키 문장이 복사되었습니다!");
+    }
+
+    function showErrorModal(title, message) {
+      document.getElementById('error-title').innerText = title;
+      document.getElementById('error-desc').innerText = message;
+      document.getElementById('error-modal').classList.remove('hidden');
+    }
+
+    function closeErrorModal() {
+      document.getElementById('error-modal').classList.add('hidden');
+    }
+
+    function retryLastAnalysis() {
+      closeErrorModal();
+      analyzeEssay();
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-msg');
+      toastMsg.innerText = msg;
+      toast.classList.remove('-translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    // TTS 음성 읽기 (브라우저 정책 안전 처리)
+    function speakWord(word) {
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(word);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.9;
+          window.speechSynthesis.speak(utterance);
+        } else {
+          showToast("음성 합성을 지원하지 않는 브라우저입니다.");
+        }
+      } catch (e) {
+        showToast("음성 재생 중 오류가 발생했습니다.");
+      }
+    }
+
+    function readAloudEssay() {
+      try {
+        const data = currentData[currentVersion];
+        const fullSpeech = `${data.title}. ${data.p1} ${data.p2} ${data.p3}`;
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+          const utterance = new SpeechSynthesisUtterance(fullSpeech);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.92;
+          window.speechSynthesis.speak(utterance);
+          showToast("전체 에세이 음성 재생을 시작합니다.");
+        } else {
+          showToast("음성 합성을 지원하지 않는 브라우저입니다.");
+        }
+      } catch (e) {
+        showToast("음성 재생을 시작할 수 없습니다.");
+      }
+    }
+
+    // JSON 파싱 방어 함수 (마크다운 ```json ... ``` 및 깨진 기호 완화)
+    function cleanAndParseJSON(rawText) {
+      let cleaned = rawText.trim();
+      if (cleaned.startsWith("```")) {
+        cleaned = cleaned.replace(/^```[a-zA-Z0-9]*\n?/, '').replace(/```$/, '').trim();
+      }
+      return JSON.parse(cleaned);
+    }
+
+    // Gemini API 호출 (지수 백오프 exponential backoff 탑재로 쓰로틀링 오류 방지)
+    async function fetchWithBackoff(apiUrl, payload, maxRetries = 3) {
+      let delay = 1000;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData?.error?.message || `HTTP ${response.status}`;
+            if (response.status === 429 || response.status >= 500) {
+              if (attempt < maxRetries - 1) {
+                await new Promise(res => setTimeout(res, delay));
+                delay *= 2;
+                continue;
+              }
+            }
+            throw new Error(errMsg);
+          }
+
+          return await response.json();
+        } catch (err) {
+          if (attempt === maxRetries - 1) throw err;
+          await new Promise(res => setTimeout(res, delay));
+          delay *= 2;
+        }
+      }
+      throw new Error("요청이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.");
+    }
+
+    // 실시간 에세이 정밀 분석 (텍스트 또는 사진 직접 인식)
+    async function analyzeEssay() {
+      const inputEl = document.getElementById('essay-input');
+      const inputText = inputEl.value.trim();
+
+      // 사진이나 텍스트 둘 중 하나는 있어야 분석 가능
+      if (!inputText && !uploadedImageBase64) {
+        showToast("에세이 텍스트를 입력하거나 사진을 촬영/선택해주세요!");
+        inputEl.focus();
+        return;
+      }
+
+      if (inputText && inputText.length < 20 && !uploadedImageBase64) {
+        showToast("너무 짧습니다. 최소 한두 문장 이상의 에세이를 입력해주세요.");
+        return;
+      }
+
+      const modal = document.getElementById('loading-modal');
+      const submitBtn = document.getElementById('submit-btn');
+      const loadingTitle = document.getElementById('loading-status-title');
+      const loadingDesc = document.getElementById('loading-status-desc');
+
+      if (uploadedImageBase64) {
+        loadingTitle.innerText = "사진 속 글자를 인식 및 분석 중입니다...";
+        loadingDesc.innerText = "손글씨/이미지 OCR 판독 후 문법 및 논리 정밀 첨삭 진행 중";
+      } else {
+        loadingTitle.innerText = "에세이를 정밀 분석 중입니다...";
+        loadingDesc.innerText = "문법 오류 감지, 논리적 흐름 재배치, 2개 버전 교정본 생성 중";
+      }
+
+      modal.classList.remove('hidden');
+      submitBtn.disabled = true;
+
+      const systemPrompt = `You are a warm, highly skilled English essay tutor for Korean elementary and middle school students preparing for academy tasks (such as Chungdahm, Toefl Junior, iBT).
+Analyze the student's English essay (which may be provided as text, or extracted from an uploaded photo of a notebook/screen) and return a strictly valid JSON object matching the schema.
+Ensure that:
+1. originalSections: Break down the original essay into logical paragraphs. Highlight grammatical errors with <span class="bg-rose-100 text-rose-800 px-1 py-0.5 rounded border border-rose-300 font-medium">...</span>, and awkward phrasing with <span class="bg-amber-100 text-amber-800 px-1 py-0.5 rounded border border-amber-300">...</span>. If any sentence/paragraph is duplicated, mark isDuplicate: true and label: "중복 복사 감지".
+2. Version A (Natural): Keep student's level, fix errors, split into Title, Paragraph 1 (Intro), Paragraph 2 (Body), Paragraph 3 (Conclusion).
+3. Version B (High-scoring Academic): Advance vocabulary and logical connectors for high score, split into Title, Paragraph 1, Paragraph 2, Paragraph 3.
+4. coachingNotes: 4 distinct pinpoint feedback cards written in friendly Korean.
+5. cheatSentence: A high-impact booster sentence in English with Korean translation.
+6. vocabulary: 4 key vocabulary words or idioms with Korean definitions.`;
+
+      // 멀티모달 파트 구성 (이미지 포함 시 인라인 데이터 추가)
+      const parts = [];
+      if (uploadedImageBase64) {
+        parts.push({
+          inlineData: {
+            mimeType: uploadedImageMimeType,
+            data: uploadedImageBase64
+          }
+        });
+        parts.push({
+          text: `Please read the essay text carefully from the provided photo/image, transcribe it, and provide full proofreading and coaching following the instructions.\n${inputText ? `Additional notes from user: ${inputText}` : ""}`
+        });
+      } else {
+        parts.push({
+          text: `Please analyze and revise this student's essay:\n\n${inputText}`
+        });
+      }
+
+      // 전달받은 Gemini API 키 적용
+      const apiKey = "AQ.Ab8RN6IlAlxwQhfscvMmLz6nT7o-sxYEpmD93088IRlgTVb9Ng";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [{ parts: parts }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              originalSections: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    label: { type: "STRING" },
+                    html: { type: "STRING" },
+                    isDuplicate: { type: "BOOLEAN" },
+                    text: { type: "STRING" }
+                  },
+                  required: ["label"]
+                }
+              },
+              A: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING" },
+                  desc: { type: "STRING" },
+                  badge: { type: "STRING" },
+                  p1: { type: "STRING" },
+                  p2: { type: "STRING" },
+                  p3: { type: "STRING" }
+                },
+                required: ["title", "p1", "p2", "p3"]
+              },
+              B: {
+                type: "OBJECT",
+                properties: {
+                  title: { type: "STRING" },
+                  desc: { type: "STRING" },
+                  badge: { type: "STRING" },
+                  p1: { type: "STRING" },
+                  p2: { type: "STRING" },
+                  p3: { type: "STRING" }
+                },
+                required: ["title", "p1", "p2", "p3"]
+              },
+              coachingNotes: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    title: { type: "STRING" },
+                    tag: { type: "STRING" },
+                    tagColor: { type: "STRING" },
+                    cardBorder: { type: "STRING" },
+                    desc: { type: "STRING" }
+                  },
+                  required: ["title", "tag", "desc"]
+                }
+              },
+              cheatSentence: { type: "STRING" },
+              vocabulary: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    word: { type: "STRING" },
+                    meaning: { type: "STRING" }
+                  },
+                  required: ["word", "meaning"]
+                }
+              }
+            },
+            required: ["originalSections", "A", "B", "coachingNotes", "cheatSentence", "vocabulary"]
+          }
+        }
+      };
+
+      try {
+        const resJson = await fetchWithBackoff(apiUrl, payload);
+        const textPart = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (!textPart) {
+          throw new Error("AI 응답 데이터가 비어 있습니다.");
+        }
+
+        const parsed = cleanAndParseJSON(textPart);
+
+        // 누락 필드 안전 보정 (Graceful Fallback)
+        currentData = {
+          originalSections: (parsed.originalSections && parsed.originalSections.length > 0)
+            ? parsed.originalSections
+            : [{ label: "입력된 원문", html: escapeHtml(inputText || "사진에서 텍스트를 추출했습니다.") }],
+          A: {
+            title: parsed.A?.title || "Natural Revision",
+            desc: parsed.A?.desc || "학생의 톤을 살린 자연스러운 교정본",
+            badge: parsed.A?.badge || "버전 A: 자연스러운 교정본 (추천)",
+            p1: parsed.A?.p1 || inputText,
+            p2: parsed.A?.p2 || "",
+            p3: parsed.A?.p3 || ""
+          },
+          B: {
+            title: parsed.B?.title || "Academic Revision",
+            desc: parsed.B?.desc || "아카데믹 어휘 탑재 고득점형 에세이",
+            badge: parsed.B?.badge || "버전 B: 고득점 토플형",
+            p1: parsed.B?.p1 || inputText,
+            p2: parsed.B?.p2 || "",
+            p3: parsed.B?.p3 || ""
+          },
+          coachingNotes: (parsed.coachingNotes && parsed.coachingNotes.length > 0)
+            ? parsed.coachingNotes.map((note, idx) => ({
+                title: note.title || `피드백 ${idx + 1}`,
+                tag: note.tag || "코칭 노트",
+                tagColor: note.tagColor || (idx % 2 === 0 ? "bg-rose-200 text-rose-900 border-rose-300" : "bg-indigo-200 text-indigo-900 border-indigo-300"),
+                cardBorder: note.cardBorder || (idx % 2 === 0 ? "border-rose-100 bg-rose-50/30" : "border-indigo-100 bg-indigo-50/30"),
+                desc: note.desc || ""
+              }))
+            : [
+                {
+                  title: "1. 문맥 연결 주의",
+                  tag: "논리 점검",
+                  tagColor: "bg-indigo-200 text-indigo-900 border-indigo-300",
+                  cardBorder: "border-indigo-100 bg-indigo-50/30",
+                  desc: "문장 사이의 접속사를 적절히 사용해 흐름을 매끄럽게 다듬었습니다."
+                }
+              ],
+          cheatSentence: parsed.cheatSentence || "Consistent effort and reflection are the true foundation of learning.",
+          vocabulary: (parsed.vocabulary && parsed.vocabulary.length > 0)
+            ? parsed.vocabulary
+            : [{ word: "improve", meaning: "개선하다, 향상시키다" }]
+        };
+
+        renderApp();
+        showToast("에세이 첨삭이 성공적으로 완료되었습니다!");
+        document.getElementById('tab-version-a').scrollIntoView({ behavior: 'smooth' });
+
+      } catch (err) {
+        showErrorModal(
+          "첨삭 생성 중 오류가 발생했습니다",
+          "AI 분석 과정에서 일시적인 지연이나 형식 파싱 오류가 발생했습니다. 잠시 후 [다시 분석하기] 버튼을 눌러주세요."
+        );
+      } finally {
+        modal.classList.add('hidden');
+        submitBtn.disabled = false;
+      }
+    }
+
+    // 초기 실행
+    window.onload = function() {
+      const inputEl = document.getElementById('essay-input');
+      if (inputEl) {
+        inputEl.value = initialSampleInput;
+      }
+      renderApp();
+    };
+  </script>
+</body>
+</html>
